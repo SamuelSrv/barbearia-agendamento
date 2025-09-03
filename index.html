@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbearia Classic Cuts - Agendamento Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-900 text-white">
+
+    <header class="bg-gray-800 shadow-lg sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <a href="#" class="text-2xl font-brand text-amber-400" data-page="home">Classic Cuts</a>
+            <div class="hidden md:flex space-x-6 items-center">
+                <a href="#" class="nav-link hover:text-amber-400" data-page="home">Home</a>
+                <a href="#" class="nav-link hover:text-amber-400" data-page="barbers">Barbeiros</a>
+                <a href="#" class="bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-amber-500" data-page="schedule">Agende seu Horário</a>
+                <a href="#" id="login-nav-link" class="nav-link hover:text-amber-400" data-page="login">Admin / Barbeiro</a>
+                <a href="#" id="admin-nav-link" class="nav-link hover:text-amber-400 hidden" data-page="admin">Painel</a>
+                <a href="#" id="logout-nav-link" class="hover:text-red-500 hidden">Sair</a>
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-white focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden bg-gray-800">
+            <a href="#" class="nav-link-mobile block py-2 px-4 text-sm hover:bg-gray-700" data-page="home">Home</a>
+            <a href="#" class="nav-link-mobile block py-2 px-4 text-sm hover:bg-gray-700" data-page="barbers">Barbeiros</a>
+            <a href="#" class="nav-link-mobile block py-2 px-4 text-sm hover:bg-gray-700" data-page="schedule">Agendar</a>
+            <a href="#" id="login-nav-link-mobile" class="nav-link-mobile block py-2 px-4 text-sm hover:bg-gray-700" data-page="login">Admin / Barbeiro</a>
+            <a href="#" id="admin-nav-link-mobile" class="nav-link-mobile hidden block py-2 px-4 text-sm hover:bg-gray-700" data-page="admin">Painel</a>
+            <a href="#" id="logout-nav-link-mobile" class="hidden block py-2 px-4 text-sm hover:bg-gray-700">Sair</a>
+        </div>
+    </header>
+
+    <main id="app-content" class="container mx-auto px-6 py-8">
+        </main>
+
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-gray-800 rounded-lg p-8 max-w-sm mx-auto">
+            <h3 id="modal-title" class="text-2xl font-bold mb-4"></h3>
+            <p id="modal-message" class="text-gray-300 mb-6"></p>
+            <button id="modal-close" class="w-full bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-amber-500">Fechar</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

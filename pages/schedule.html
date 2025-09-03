@@ -1,0 +1,42 @@
+<h2 class="text-4xl font-brand text-center mb-10">Faça seu Agendamento</h2>
+<div class="max-w-4xl mx-auto bg-gray-800 p-8 rounded-lg">
+    <div class="grid md:grid-cols-2 gap-6">
+        <div>
+            <label for="barber-select" class="block mb-2 text-sm font-medium text-gray-300">1. Escolha o Barbeiro</label>
+            <select id="barber-select" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                <option>Carregando barbeiros...</option>
+            </select>
+        </div>
+        <div>
+            <label for="date-select" class="block mb-2 text-sm font-medium text-gray-300">2. Escolha a Data</label>
+            <input type="date" id="date-select" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+        </div>
+    </div>
+    <div id="schedule-loader" class="text-center mt-8 hidden">
+        <div class="loader inline-block"></div>
+        <p>Buscando horários...</p>
+    </div>
+    <div id="time-slots-container" class="mt-8 hidden">
+        <h3 class="text-lg font-semibold mb-4 text-center">3. Escolha o Horário</h3>
+        <div id="time-slots" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+            </div>
+    </div>
+    <div id="booking-form-container" class="mt-8 hidden">
+        <h3 class="text-lg font-semibold mb-4 text-center">4. Seus Dados</h3>
+         <form id="booking-form" class="space-y-4">
+            <input type="hidden" id="selected-barber-id">
+            <input type="hidden" id="selected-barber-name">
+            <input type="hidden" id="selected-date">
+            <input type="hidden" id="selected-time">
+            <div>
+                <label for="client-name" class="block mb-2 text-sm font-medium text-gray-300">Seu Nome</label>
+                <input type="text" id="client-name" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5" required>
+            </div>
+            <div>
+                 <label for="client-phone" class="block mb-2 text-sm font-medium text-gray-300">Seu Telefone (WhatsApp)</label>
+                <input type="tel" id="client-phone" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5" required>
+            </div>
+            <button type="submit" class="w-full bg-amber-400 text-gray-900 font-bold py-3 px-5 rounded-lg hover:bg-amber-500">Confirmar Agendamento</button>
+        </form>
+    </div>
+</div>

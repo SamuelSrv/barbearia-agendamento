@@ -1,0 +1,30 @@
+<h2 class="text-4xl font-brand text-center mb-10">Painel de Gestão</h2>
+
+<div id="admin-content" class="hidden">
+    <div class="bg-gray-800 p-6 rounded-lg mb-8">
+        <h3 class="text-2xl font-bold mb-4">Adicionar Novo Barbeiro</h3>
+        <form id="add-barber-form" class="space-y-4">
+            <input type="text" id="barber-name" placeholder="Nome do Barbeiro" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required>
+            <input type="text" id="barber-photo" placeholder="URL da Foto" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required>
+            <textarea id="barber-about" placeholder="Sobre o barbeiro" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required></textarea>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Adicionar Barbeiro</button>
+        </form>
+    </div>
+    <div id="admin-barbers-list" class="bg-gray-800 p-6 rounded-lg">
+         <h3 class="text-2xl font-bold mb-4">Barbeiros Cadastrados</h3>
+         </div>
+</div>
+
+<div id="barber-content" class="hidden">
+     <div class="bg-gray-800 p-6 rounded-lg">
+        <h3 class="text-2xl font-bold mb-4">Meus Agendamentos</h3>
+         <p class="text-center mb-4">Selecione uma data para ver seus horários marcados.</p>
+         <input type="date" id="barber-schedule-date" class="bg-gray-700 border-gray-600 rounded p-2 mx-auto block">
+         <div id="barber-appointments-list" class="mt-6">
+            </div>
+    </div>
+</div>
+
+<div id="admin-loader" class="text-center">
+    <p>Verificando permissões...</p>
+</div>
