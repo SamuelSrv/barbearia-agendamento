@@ -258,11 +258,31 @@ function setupEventListeners() {
     const content = document.getElementById('app-content');
     content.addEventListener('submit', handleFormSubmissions);
     content.addEventListener('change', handleDynamicChanges);
+    // Este listener de clique agora é mais genérico para futuras adições
     content.addEventListener('click', handleDynamicClicks);
 }
 
 async function handleFormSubmissions(e) {
     e.preventDefault();
+
+    // ==========================================================
+    // CÓDIGO DE LOGIN RESTAURADO AQUI
+    // ==========================================================
+    if (e.target.id === 'login-form') {
+        const email = e.target.querySelector('#login-email').value;
+        const password = e.target.querySelector('#login-password').value;
+        const errorP = e.target.querySelector('#login-error');
+        errorP.textContent = ''; // Limpa erros antigos
+
+        try {
+            await auth.login(email, password);
+            loadPage('admin');
+        } catch (error) {
+            errorP.textContent = "Email ou senha inválidos.";
+            console.error("Falha no login:", error);
+        }
+    }
+
     if(e.target.id === 'service-form') {
         const id = e.target.querySelector('#service-id').value;
         const data = {
@@ -340,7 +360,7 @@ async function handleDynamicChanges(e) {
 }
 
 function handleDynamicClicks(e) {
-    // Lógica para delegação de eventos de clique
+    // Lógica para delegação de eventos de clique, como remover barbeiro, etc.
 }
 
 async function handleBarberSlotClick(slot) {
