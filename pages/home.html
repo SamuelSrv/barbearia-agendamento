@@ -1,21 +1,78 @@
-<div class="text-center">
-    <h1 class="text-5xl font-brand text-amber-400 mb-4">A Arte da Barbearia Tradicional</h1>
-    <p class="text-lg text-gray-300 mb-8">Onde cada corte é uma obra-prima. Estilo, precisão e uma experiência única.</p>
-    <button class="bg-amber-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-xl hover:bg-amber-500 transition duration-300" data-page="schedule">
+<!-- Hero Section -->
+<section class="hero-section text-white text-center py-32 px-6">
+    <h1 class="text-5xl md:text-6xl font-brand mb-4">A Arte da Barbearia Tradicional</h1>
+    <p class="text-lg text-gray-300 max-w-2xl mx-auto mb-8">Onde cada corte é uma obra-prima. Estilo, precisão e uma experiência única.</p>
+    <button class="bg-amber-500 text-gray-900 font-bold py-3 px-8 rounded-lg text-xl hover:bg-amber-600 transition duration-300" data-page="schedule">
         Agende seu Horário Agora
     </button>
-</div>
-<div class="mt-16 grid md:grid-cols-3 gap-8">
-    <div class="bg-gray-800 p-6 rounded-lg text-center">
-        <h3 class="text-2xl font-bold text-amber-400 mb-2">Cortes Clássicos</h3>
-        <p class="text-gray-400">Do pompadour ao razor part, dominamos os estilos que nunca saem de moda.</p>
+</section>
+
+<!-- Services Section -->
+<section class="container mx-auto px-6 py-20">
+    <h2 class="text-4xl font-brand text-center mb-12">Nossos Serviços</h2>
+    <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-gray-800 p-8 rounded-lg text-center border border-gray-700">
+            <h3 class="text-2xl font-bold text-amber-500 mb-2">Cortes Clássicos</h3>
+            <p class="text-gray-400">Do pompadour ao razor part, dominamos os estilos que nunca saem de moda.</p>
+        </div>
+        <div class="bg-gray-800 p-8 rounded-lg text-center border border-gray-700">
+             <h3 class="text-2xl font-bold text-amber-500 mb-2">Barba Terapia</h3>
+             <p class="text-gray-400">Modelagem de barba com toalha quente, navalha e os melhores produtos do mercado.</p>
+        </div>
+        <div class="bg-gray-800 p-8 rounded-lg text-center border border-gray-700">
+             <h3 class="text-2xl font-bold text-amber-500 mb-2">Ambiente Premium</h3>
+             <p class="text-gray-400">Um lugar para relaxar, tomar um café e cuidar do visual com tranquilidade.</p>
+        </div>
     </div>
-    <div class="bg-gray-800 p-6 rounded-lg text-center">
-         <h3 class="text-2xl font-bold text-amber-400 mb-2">Barba Terapia</h3>
-         <p class="text-gray-400">Modelagem de barba com toalha quente, navalha e os melhores produtos do mercado.</p>
+</section>
+
+<!-- Pricing Section com Novas Imagens -->
+<section class="bg-gray-900 py-20">
+    <div class="container mx-auto px-6">
+        <h2 class="text-4xl font-brand text-center mb-12">Nossos Preços</h2>
+        <div class="max-w-4xl mx-auto">
+            <div class="grid md:grid-cols-2 gap-x-12 gap-y-8">
+                <!-- Price Item -->
+                <div class="flex items-center space-x-4">
+                    <img src="https://images.unsplash.com/photo-1512499617640-c74ae3a79d37?q=80&w=400&auto=format&fit=crop" class="w-16 h-16 rounded-full object-cover border-2 border-gray-700">
+                    <div class="flex-grow">
+                        <h4 class="font-semibold text-lg">Corte de Cabelo</h4>
+                        <p class="text-sm text-gray-400">Tesoura ou máquina</p>
+                    </div>
+                    <span class="flex-grow border-b-2 border-dotted border-gray-600 mx-2"></span>
+                    <p class="font-bold text-lg text-amber-500">R$45</p>
+                </div>
+                <!-- Price Item -->
+                 <div class="flex items-center space-x-4">
+                    <img src="https://images.unsplash.com/photo-1632345031435-8727f6897f53?q=80&w=400&auto=format&fit=crop" class="w-16 h-16 rounded-full object-cover border-2 border-gray-700">
+                    <div class="flex-grow">
+                        <h4 class="font-semibold text-lg">Barba Modelada</h4>
+                        <p class="text-sm text-gray-400">Toalha quente e navalha</p>
+                    </div>
+                    <span class="flex-grow border-b-2 border-dotted border-gray-600 mx-2"></span>
+                    <p class="font-bold text-lg text-amber-500">R$40</p>
+                </div>
+                <!-- Price Item -->
+                <div class="flex items-center space-x-4">
+                    <img src="https://images.unsplash.com/photo-1596728323641-a692411a42b1?q=80&w=400&auto=format&fit=crop" class="w-16 h-16 rounded-full object-cover border-2 border-gray-700">
+                    <div class="flex-grow">
+                        <h4 class="font-semibold text-lg">Cabelo e Barba</h4>
+                        <p class="text-sm text-gray-400">O combo completo</p>
+                    </div>
+                    <span class="flex-grow border-b-2 border-dotted border-gray-600 mx-2"></span>
+                    <p class="font-bold text-lg text-amber-500">R$80</p>
+                </div>
+                 <!-- Price Item -->
+                <div class="flex items-center space-x-4">
+                    <img src="https://images.unsplash.com/photo-1567894340345-a634421495ea?q=80&w=400&auto=format&fit=crop" class="w-16 h-16 rounded-full object-cover border-2 border-gray-700">
+                    <div class="flex-grow">
+                        <h4 class="font-semibold text-lg">Acabamento</h4>
+                        <p class="text-sm text-gray-400">Pezinho e sobrancelha</p>
+                    </div>
+                    <span class="flex-grow border-b-2 border-dotted border-gray-600 mx-2"></span>
+                    <p class="font-bold text-lg text-amber-500">R$25</p>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="bg-gray-800 p-6 rounded-lg text-center">
-         <h3 class="text-2xl font-bold text-amber-400 mb-2">Ambiente Premium</h3>
-         <p class="text-gray-400">Um lugar para relaxar, tomar um café e cuidar do visual com tranquilidade.</p>
-    </div>
-</div>
+</section>
