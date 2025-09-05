@@ -103,13 +103,15 @@ async function setupPage(page) {
     cleanupListeners();
     state.booking = { service: null, barber: null, date: null, time: null };
 
-    // Adiciona listener para a página de barbeiros pública
     if (page === 'barbers') {
         state.listeners.barbers = api.getBarbers(barbers => {
-            // Esta função renderiza a lista pública de barbeiros
             const barbersListContainer = document.getElementById('barbers-list');
             if(barbersListContainer) {
                 barbersListContainer.innerHTML = '';
+                if (barbers.length === 0) {
+                     barbersListContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full">Nenhum barbeiro encontrado.</p>';
+                     return;
+                }
                 barbers.forEach(barber => {
                     const div = document.createElement('div');
                     div.className = 'bg-gray-800 p-6 rounded-lg text-center';
@@ -168,7 +170,7 @@ function setupAdminTabs() {
 async function loadAdminTabData(tabId) {
     cleanupListeners();
     switch(tabId) {
-        case 'manage-barbers': // Lógica para carregar e renderizar barbeiros no admin
+        case 'manage-barbers':
             state.listeners.barbers = api.getBarbers(barbers => {
                 const container = document.getElementById('admin-barbers-list');
                 if (container) {
@@ -186,20 +188,9 @@ async function loadAdminTabData(tabId) {
             });
             break;
         case 'manage-services':
-             ui.renderAdminServices(state.services,
-                (id) => {
-                    const service = state.services.find(s => s.id === id);
-                    if (service) {
-                        document.getElementById('service-id').value = service.id;
-                        document.getElementById('service-name').value = service.name;
-                        document.getElementById('service-duration').value = service.duration;
-                        document.getElementById('service-price').value = service.price;
-                    }
-                },
-                async (id) => {
-                    if(confirm('Tem certeza? Isso removerá o serviço permanentemente.')) await api.removeService(id);
-                }
-             );
+             // O listener principal já está cuidando da atualização do state.services.
+             // Aqui apenas renderizamos a lista com os dados atuais.
+             renderAdminServicesUI();
             break;
         case 'manage-schedules':
             ui.populateBarberSelect(state.barbers, 'schedule-barber-select');
@@ -212,6 +203,25 @@ async function loadAdminTabData(tabId) {
             break;
     }
 }
+
+// Função auxiliar para renderizar a UI de serviços no painel
+function renderAdminServicesUI() {
+    ui.renderAdminServices(state.services,
+        (id) => { // Lógica de Edição
+            const service = state.services.find(s => s.id === id);
+            if (service) {
+                document.getElementById('service-id').value = service.id;
+                document.getElementById('service-name').value = service.name;
+                document.getElementById('service-duration').value = service.duration;
+                document.getElementById('service-price').value = service.price;
+            }
+        },
+        async (id) => { // Lógica de Remoção
+            if(confirm('Tem certeza? Isso removerá o serviço permanentemente.')) await api.removeService(id);
+        }
+    );
+}
+
 
 async function loadBarberDaySchedule(date) {
     const barberId = state.currentUser.uid;
@@ -296,7 +306,7 @@ function setupEventListeners() {
     const content = document.getElementById('app-content');
     content.addEventListener('submit', handleFormSubmissions);
     content.addEventListener('change', handleDynamicChanges);
-    content.addEventListener('click', handleDynamicClicks); // Listener para botões de remover, etc.
+    content.addEventListener('click', handleDynamicClicks);
 }
 
 async function handleFormSubmissions(e) {
@@ -313,18 +323,13 @@ async function handleFormSubmissions(e) {
             errorP.textContent = "Email ou senha inválidos.";
         }
     }
-    // ==========================================================
-    // CÓDIGO PARA ADICIONAR BARBEIRO RESTAURADO AQUI
-    // ==========================================================
     if (e.target.id === 'add-barber-form') {
         const name = e.target.querySelector('input[type="text"]').value;
         const imageUrl = e.target.querySelector('input[type="text"]:nth-of-type(2)').value;
         const about = e.target.querySelector('textarea').value;
         try {
-            // No futuro, isso deveria criar um usuário no Authentication primeiro,
-            // mas por agora, vamos assumir que ele já foi criado lá.
             await api.addBarber(name, imageUrl, about);
-            ui.modal.show("Sucesso!", "Barbeiro adicionado. Lembre-se de criar o login para ele no Firebase Authentication.");
+            ui.modal.show("Sucesso!", "Barbeiro adicionado. Lembre-se de criar o login para ele no Firebase Authentication e definir seus horários de trabalho.");
             e.target.reset();
         } catch (error) {
             ui.modal.show("Erro", "Não foi possível adicionar o barbeiro.");
@@ -334,22 +339,39 @@ async function handleFormSubmissions(e) {
 
     if(e.target.id === 'service-form') {
         const id = e.target.querySelector('#service-id').value;
+        const nameInput = e.target.querySelector('#service-name');
+        const durationInput = e.target.querySelector('#service-duration');
+        const priceInput = e.target.querySelector('#service-price');
+        
         const data = {
-            name: e.target.querySelector('#service-name').value,
-            duration: parseInt(e.target.querySelector('#service-duration').value),
-            price: parseFloat(e.target.querySelector('#service-price').value),
+            name: nameInput.value,
+            duration: parseInt(durationInput.value),
+            price: parseFloat(priceInput.value),
         };
-        if (id) {
-            await api.updateService(id, data);
-        } else {
-            await api.addService(data);
+
+        if (!data.name || !data.duration || !data.price) {
+            ui.modal.show("Erro", "Por favor, preencha todos os campos do serviço.");
+            return;
         }
-        e.target.reset();
-        document.getElementById('service-id').value = '';
+
+        try {
+            if (id) {
+                await api.updateService(id, data);
+                 ui.modal.show("Sucesso!", "Serviço atualizado.");
+            } else {
+                await api.addService(data);
+                ui.modal.show("Sucesso!", "Serviço adicionado.");
+            }
+            e.target.reset();
+            document.getElementById('service-id').value = '';
+        } catch(error) {
+            ui.modal.show("Erro", "Ocorreu um erro ao salvar o serviço.");
+            console.error("Erro ao salvar serviço:", error);
+        }
     }
     if (e.target.id === 'work-schedule-form') {
         const barberId = document.getElementById('schedule-barber-select').value;
-        if (!barberId) { alert('Selecione um barbeiro!'); return; }
+        if (!barberId) { ui.modal.show("Atenção", "Selecione um barbeiro!"); return; }
         const formData = new FormData(e.target);
         const schedule = {};
         const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -363,7 +385,7 @@ async function handleFormSubmissions(e) {
             };
         });
         await api.updateBarberWorkSchedule(barberId, schedule);
-        alert('Horários salvos com sucesso!');
+        ui.modal.show("Sucesso!", "Horários salvos.");
     }
     if (e.target.id === 'booking-form') {
         const appointmentData = {
@@ -378,7 +400,7 @@ async function handleFormSubmissions(e) {
         };
         delete appointmentData.service;
         await api.createAppointment(appointmentData);
-        alert('Agendamento confirmado!');
+        ui.modal.show("Confirmado!", "Seu agendamento foi confirmado com sucesso.");
         loadPage('home');
     }
 }
@@ -409,9 +431,6 @@ async function handleDynamicChanges(e) {
 }
 
 async function handleDynamicClicks(e) {
-    // ==========================================================
-    // CÓDIGO PARA REMOVER BARBEIRO RESTAURADO AQUI
-    // ==========================================================
     if (e.target.classList.contains('remove-barber-btn')) {
         const barberId = e.target.dataset.id;
         if (confirm('Tem certeza que deseja remover este barbeiro? A ação não pode ser desfeita.')) {
@@ -456,8 +475,20 @@ export async function loadPage(page) {
 function init() {
     auth.setupAuthListener();
 
-    state.listeners.services = api.getServices(services => state.services = services);
-    state.listeners.barbers = api.getBarbers(barbers => state.barbers = barbers);
+    // ==========================================================
+    // CORREÇÃO APLICADA AQUI: O listener agora também redesenha a UI
+    // ==========================================================
+    state.listeners.services = api.getServices(services => {
+        state.services = services;
+        // Se o usuário estiver na aba de gerenciar serviços, atualiza a lista em tempo real
+        if (document.getElementById('manage-services-content')?.style.display === 'block') {
+            renderAdminServicesUI();
+        }
+    });
+
+    state.listeners.barbers = api.getBarbers(barbers => {
+        state.barbers = barbers;
+    });
 
     setupEventListeners();
     const initialPage = window.location.hash.replace('#', '') || 'home';
