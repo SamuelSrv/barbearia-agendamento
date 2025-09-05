@@ -1,27 +1,84 @@
-<h2 class="text-4xl font-brand text-center mb-10">Painel de Gestão</h2>
+<h2 class="text-4xl font-brand text-center mb-6">Painel de Gestão</h2>
 
-<div id="admin-content" class="hidden">
-    <div class="bg-gray-800 p-6 rounded-lg mb-8">
-        <h3 class="text-2xl font-bold mb-4">Adicionar Novo Barbeiro</h3>
-        <form id="add-barber-form" class="space-y-4">
-            <input type="text" id="barber-name" placeholder="Nome do Barbeiro" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required>
-            <input type="text" id="barber-photo" placeholder="URL da Foto" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required>
-            <textarea id="barber-about" placeholder="Sobre o barbeiro" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required></textarea>
-            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Adicionar Barbeiro</button>
-        </form>
-    </div>
-    <div id="admin-barbers-list" class="bg-gray-800 p-6 rounded-lg">
-         <h3 class="text-2xl font-bold mb-4">Barbeiros Cadastrados</h3>
-         </div>
+<!-- Navegação em Abas do Painel -->
+<div class="mb-8 border-b border-gray-700">
+    <nav id="admin-tabs" class="flex space-x-4" aria-label="Tabs">
+        <!-- As abas serão geradas pelo JS dependendo da role (admin/barber) -->
+    </nav>
 </div>
 
-<div id="barber-content" class="hidden">
-     <div class="bg-gray-800 p-6 rounded-lg">
-        <h3 class="text-2xl font-bold mb-4">Meus Agendamentos</h3>
-         <p class="text-center mb-4">Selecione uma data para ver seus horários marcados.</p>
-         <input type="date" id="barber-schedule-date" class="bg-gray-700 border-gray-600 rounded p-2 mx-auto block">
-         <div id="barber-appointments-list" class="mt-6">
+<!-- Conteúdo das Abas -->
+<div id="admin-tab-content">
+
+    <!-- ABA: DASHBOARD (Apenas Admin) -->
+    <div id="dashboard-content" class="admin-tab-pane">
+        <h3 class="text-2xl font-bold mb-6">Dashboard</h3>
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h4 class="font-semibold mb-4">Agendamentos da Semana</h4>
+                <canvas id="appointments-chart-week"></canvas>
             </div>
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h4 class="font-semibold mb-4">Agendamentos por Barbeiro (Mês)</h4>
+                <canvas id="appointments-chart-barber"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA: GERENCIAR BARBEIROS (Apenas Admin) -->
+    <div id="manage-barbers-content" class="admin-tab-pane">
+        <div class="bg-gray-800 p-6 rounded-lg mb-8">
+            <h3 class="text-2xl font-bold mb-4">Adicionar Novo Barbeiro</h3>
+            <form id="add-barber-form" class="space-y-4">
+                <input type="text" placeholder="Nome do Barbeiro" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required>
+                <input type="text" placeholder="URL da Foto" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required>
+                <textarea placeholder="Sobre o barbeiro" class="bg-gray-700 border-gray-600 rounded p-2 w-full" required></textarea>
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Adicionar</button>
+            </form>
+        </div>
+        <div id="admin-barbers-list" class="bg-gray-800 p-6 rounded-lg">
+             <h3 class="text-2xl font-bold mb-4">Barbeiros Cadastrados</h3>
+        </div>
+    </div>
+
+    <!-- ABA: GERENCIAR SERVIÇOS (Apenas Admin) -->
+    <div id="manage-services-content" class="admin-tab-pane">
+         <div class="bg-gray-800 p-6 rounded-lg mb-8">
+            <h3 class="text-2xl font-bold mb-4">Adicionar/Editar Serviço</h3>
+            <form id="service-form" class="space-y-4">
+                <input type="hidden" id="service-id">
+                <input type="text" id="service-name" placeholder="Nome do Serviço" class="bg-gray-700 rounded p-2 w-full" required>
+                <input type="number" id="service-duration" placeholder="Duração (em minutos)" class="bg-gray-700 rounded p-2 w-full" required>
+                <input type="number" id="service-price" placeholder="Preço (ex: 45)" class="bg-gray-700 rounded p-2 w-full" required>
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Salvar Serviço</button>
+            </form>
+        </div>
+        <div id="admin-services-list" class="bg-gray-800 p-6 rounded-lg">
+             <h3 class="text-2xl font-bold mb-4">Serviços Cadastrados</h3>
+        </div>
+    </div>
+
+    <!-- ABA: HORÁRIOS DE TRABALHO (Apenas Admin) -->
+    <div id="manage-schedules-content" class="admin-tab-pane">
+        <h3 class="text-2xl font-bold mb-4">Gerenciar Horários de Trabalho</h3>
+        <label for="schedule-barber-select" class="block mb-2 text-sm">Selecione um barbeiro para editar</label>
+        <select id="schedule-barber-select" class="bg-gray-700 rounded p-2 mb-6"></select>
+        <form id="work-schedule-form">
+            <!-- O formulário de horários será gerado aqui -->
+        </form>
+         <button type="submit" form="work-schedule-form" class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Salvar Horários</button>
+    </div>
+
+    <!-- ABA: MINHA AGENDA (Apenas Barbeiro) -->
+    <div id="my-schedule-content" class="admin-tab-pane">
+         <div class="bg-gray-800 p-6 rounded-lg">
+            <h3 class="text-2xl font-bold mb-4">Minha Agenda</h3>
+            <p class="text-center mb-4">Selecione uma data para ver seus horários e bloquear horários vagos.</p>
+            <input type="text" id="barber-date-picker" placeholder="Selecione uma data..." class="bg-gray-700 border-gray-600 rounded p-2 mx-auto block">
+            <div id="barber-day-schedule" class="mt-6">
+                <!-- Agenda do dia do barbeiro será renderizada aqui -->
+            </div>
+        </div>
     </div>
 </div>
 

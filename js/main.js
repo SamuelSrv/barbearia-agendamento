@@ -1,70 +1,241 @@
-// A inicialização do Firebase foi removida daqui, pois agora é centralizada
-import { getBarbers, addBarber, removeBarber, getAppointments, createAppointment, getAppointmentsForBarber } from './api.js';
+import * as api from './api.js';
 import * as ui from './ui.js';
 import * as auth from './auth.js';
 
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
 export const state = {
     currentUser: null,
-    unsubscribeBarbers: null,
-    unsubscribeAppointments: null,
+    booking: {}, // Será resetado a cada novo agendamento
+    services: [],
+    barbers: [],
+    // Listeners do Firebase que precisam ser desligados ao trocar de página/usuário
+    listeners: {
+        services: null,
+        barbers: null,
+        appointments: null,
+        blockedSlots: null
+    }
 };
 
-// --- ROTEAMENTO E CARREGAMENTO DE PÁGINAS ---
-const appContent = document.getElementById('app-content');
-
-export async function loadPage(page) {
-    // Limpa listeners antigos para evitar memory leaks
-    if (state.unsubscribeBarbers) state.unsubscribeBarbers();
-    if (state.unsubscribeAppointments) state.unsubscribeAppointments();
-
-    window.location.hash = page; // Atualiza a URL
-    try {
-        const response = await fetch(`pages/${page}.html`);
-        if (!response.ok) throw new Error('Página não encontrada');
-        appContent.innerHTML = await response.text();
-        document.title = `Classic Cuts - ${page.charAt(0).toUpperCase() + page.slice(1)}`;
-        await setupPage(page);
-    } catch (error) {
-        console.error("Erro ao carregar página:", error);
-        appContent.innerHTML = `<p class="text-center text-red-500">Erro: ${error.message}. <a href="#" data-page="home">Voltar para Home</a>.</p>`;
-    }
+// --- FUNÇÃO CENTRAL DE LIMPEZA ---
+function cleanupListeners() {
+    Object.keys(state.listeners).forEach(key => {
+        if (state.listeners[key]) {
+            state.listeners[key](); // Executa a função de unsubscribe do Firebase
+            state.listeners[key] = null;
+        }
+    });
 }
 
-// --- CONFIGURAÇÃO ESPECÍFICA DE CADA PÁGINA ---
+
+// --- LÓGICA DE AGENDAMENTO ---
+async function calculateAvailableSlots() {
+    const { service, barber, date } = state.booking;
+    if (!service || !barber || !date) return [];
+
+    const barberData = state.barbers.find(b => b.id === barber);
+    if (!barberData) return [];
+
+    const dayOfWeek = new Date(date + 'T12:00:00Z').toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
+    const workSchedule = barberData.workSchedule?.[dayOfWeek];
+
+    if (!workSchedule || !workSchedule.active) return [];
+
+    const appointmentsPromise = new Promise(resolve => {
+        const unsubscribe = api.getAppointments(barber, date, (data) => {
+            unsubscribe();
+            resolve(data);
+        });
+    });
+    const blockedSlotsPromise = new Promise(resolve => {
+        const unsubscribe = api.getBlockedSlots(barber, date, (data) => {
+            unsubscribe();
+            resolve(data);
+        });
+    });
+    const [appointments, blockedSlots] = await Promise.all([appointmentsPromise, blockedSlotsPromise]);
+
+    const toMinutes = (timeStr) => parseInt(timeStr.split(':')[0]) * 60 + parseInt(timeStr.split(':')[1]);
+    const workStart = toMinutes(workSchedule.start);
+    const workEnd = toMinutes(workSchedule.end);
+    const breakStart = workSchedule.breakStart ? toMinutes(workSchedule.breakStart) : null;
+    const breakEnd = workSchedule.breakEnd ? toMinutes(workSchedule.breakEnd) : null;
+
+    let occupiedSlots = [];
+    appointments.forEach(app => {
+        const start = toMinutes(app.time);
+        occupiedSlots.push({ start, end: start + app.duration });
+    });
+    blockedSlots.forEach(block => {
+        const start = toMinutes(block.time);
+        occupiedSlots.push({ start, end: start + 30 }); // Bloqueios são de 30 min
+    });
+    if (breakStart !== null && breakEnd !== null) {
+        occupiedSlots.push({ start: breakStart, end: breakEnd });
+    }
+
+    const availableSlots = [];
+    const serviceDuration = service.duration;
+    const step = 15;
+
+    for (let currentSlotStart = workStart; currentSlotStart <= workEnd - serviceDuration; currentSlotStart += step) {
+        const currentSlotEnd = currentSlotStart + serviceDuration;
+        let isAvailable = true;
+
+        for (const occupied of occupiedSlots) {
+            if (currentSlotStart < occupied.end && currentSlotEnd > occupied.start) {
+                isAvailable = false;
+                break;
+            }
+        }
+
+        if (isAvailable) {
+            const hours = Math.floor(currentSlotStart / 60).toString().padStart(2, '0');
+            const minutes = (currentSlotStart % 60).toString().padStart(2, '0');
+            availableSlots.push(`${hours}:${minutes}`);
+        }
+    }
+    return availableSlots;
+}
+
+// --- ROTEAMENTO E CONFIGURAÇÃO DE PÁGINAS ---
 async function setupPage(page) {
+    cleanupListeners();
+    state.booking = { service: null, barber: null, date: null, time: null };
+
     switch(page) {
-        case 'barbers':
-            state.unsubscribeBarbers = getBarbers(barbers => ui.renderBarbers(barbers, 'barbers-list'));
-            break;
         case 'schedule':
-            document.getElementById('date-select').min = new Date().toISOString().split("T")[0];
-            getBarbers(ui.populateBarberSelect);
+            ui.renderServicesList(state.services, (service) => {
+                state.booking.service = service;
+                document.getElementById('step-2-barber').classList.remove('hidden');
+                document.getElementById('step-3-datetime').classList.add('hidden');
+                document.getElementById('booking-form-container').classList.add('hidden');
+            });
+            ui.populateBarberSelect(state.barbers, 'barber-select');
+            ui.initPhoneMask('client-phone');
             break;
         case 'admin':
-            if (!state.currentUser) {
-                ui.modal.show('Acesso Negado', 'Você precisa estar logado para acessar esta página.');
-                loadPage('login');
-                return;
-            }
-            document.getElementById('admin-loader').classList.add('hidden');
-            if (state.currentUser.role === 'admin') {
-                document.getElementById('admin-content').classList.remove('hidden');
-                state.unsubscribeBarbers = getBarbers(ui.renderAdminBarbers);
-            } else {
-                document.getElementById('barber-content').classList.remove('hidden');
-                const today = new Date().toISOString().split("T")[0];
-                document.getElementById('barber-schedule-date').value = today;
-                state.unsubscribeAppointments = getAppointmentsForBarber(state.currentUser.uid, today, ui.renderBarberAppointments);
-            }
+            if (!state.currentUser) { loadPage('login'); return; }
+            document.getElementById('admin-loader')?.classList.add('hidden');
+            ui.renderAdminTabs(state.currentUser.role);
+            setupAdminTabs();
             break;
     }
 }
 
-// --- EVENT LISTENERS GLOBAIS ---
+// --- LÓGICA DO PAINEL ADMIN ---
+function setupAdminTabs() {
+    const tabsContainer = document.getElementById('admin-tabs');
+    if (!tabsContainer) return;
+
+    tabsContainer.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tabId = e.target.dataset.tab;
+        if(tabId) {
+            ui.switchAdminTab(tabId);
+            loadAdminTabData(tabId);
+        }
+    });
+
+    const firstTab = tabsContainer.querySelector('a')?.dataset.tab;
+    if (firstTab) {
+        ui.switchAdminTab(firstTab);
+        loadAdminTabData(firstTab);
+    }
+}
+
+async function loadAdminTabData(tabId) {
+    cleanupListeners();
+    switch(tabId) {
+        case 'manage-services':
+             ui.renderAdminServices(state.services,
+                (id) => {
+                    const service = state.services.find(s => s.id === id);
+                    if (service) {
+                        document.getElementById('service-id').value = service.id;
+                        document.getElementById('service-name').value = service.name;
+                        document.getElementById('service-duration').value = service.duration;
+                        document.getElementById('service-price').value = service.price;
+                    }
+                },
+                async (id) => {
+                    if(confirm('Tem certeza? Isso removerá o serviço permanentemente.')) await api.removeService(id);
+                }
+             );
+            break;
+        case 'manage-schedules':
+            ui.populateBarberSelect(state.barbers, 'schedule-barber-select');
+            document.getElementById('schedule-barber-select').dispatchEvent(new Event('change'));
+            break;
+        case 'my-schedule':
+            ui.initDatePicker('barber-date-picker', date => loadBarberDaySchedule(date));
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('barber-date-picker')._flatpickr.setDate(today, true);
+            break;
+    }
+}
+
+async function loadBarberDaySchedule(date) {
+    const barberId = state.currentUser.uid;
+    const barberData = state.barbers.find(b => b.id === barberId);
+
+    if (!barberData) return;
+
+    const dayOfWeek = new Date(date + 'T12:00:00Z').toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
+    const workSchedule = barberData.workSchedule?.[dayOfWeek];
+
+    if (!workSchedule || !workSchedule.active) {
+        ui.renderBarberDaySchedule([], () => {});
+        return;
+    }
+
+    const onDataUpdate = (appointments, blockedSlots) => {
+        const toMinutes = (t) => parseInt(t.split(':')[0])*60 + parseInt(t.split(':')[1]);
+        const fromMinutes = (m) => `${Math.floor(m/60).toString().padStart(2, '0')}:${(m%60).toString().padStart(2, '0')}`;
+
+        const slots = [];
+        const occupied = new Set();
+
+        appointments.forEach(app => {
+            const startMin = toMinutes(app.time);
+            for(let i = 0; i < app.duration; i += 30) {
+                occupied.add(startMin + i);
+            }
+            slots.push({ time: app.time, type: 'appointment', details: app });
+        });
+
+        blockedSlots.forEach(block => {
+            occupied.add(toMinutes(block.time));
+            slots.push({ ...block, type: 'blocked' });
+        });
+
+        const start = toMinutes(workSchedule.start);
+        const end = toMinutes(workSchedule.end);
+        for (let min = start; min < end; min += 30) {
+            if (!occupied.has(min)) {
+                slots.push({ time: fromMinutes(min), type: 'free' });
+            }
+        }
+
+        slots.sort((a,b) => toMinutes(a.time) - toMinutes(b.time));
+        ui.renderBarberDaySchedule(slots, handleBarberSlotClick);
+    };
+
+    let currentAppointments = [], currentBlocks = [];
+    state.listeners.appointments = api.getAppointments(barberId, date, (apps) => {
+        currentAppointments = apps;
+        onDataUpdate(currentAppointments, currentBlocks);
+    });
+    state.listeners.blockedSlots = api.getBlockedSlots(barberId, date, (blocks) => {
+        currentBlocks = blocks;
+        onDataUpdate(currentAppointments, currentBlocks);
+    });
+}
+
+// --- EVENT HANDLERS ---
 function setupEventListeners() {
-    // Navegação Principal
-    document.querySelector('header').addEventListener('click', e => {
+    const header = document.querySelector('header');
+    header.addEventListener('click', e => {
         if (e.target.matches('a[data-page], button[data-page]')) {
             e.preventDefault();
             loadPage(e.target.dataset.page);
@@ -81,110 +252,132 @@ function setupEventListeners() {
         }
     });
 
-    // Event listeners dinâmicos para o conteúdo carregado
-    appContent.addEventListener('submit', handleFormSubmissions);
-    appContent.addEventListener('change', handleDynamicChanges);
-    appContent.addEventListener('click', handleDynamicClicks);
+    const modal = document.getElementById('modal');
+    modal.querySelector('#modal-close').addEventListener('click', () => modal.classList.add('hidden'));
 
-    // Modal
-    document.getElementById('modal-close').addEventListener('click', ui.modal.hide);
+    const content = document.getElementById('app-content');
+    content.addEventListener('submit', handleFormSubmissions);
+    content.addEventListener('change', handleDynamicChanges);
+    content.addEventListener('click', handleDynamicClicks);
 }
 
-// --- HANDLERS DE EVENTOS DINÂMICOS ---
 async function handleFormSubmissions(e) {
     e.preventDefault();
-    if (e.target.id === 'login-form') {
-        const email = e.target.querySelector('#login-email').value;
-        const password = e.target.querySelector('#login-password').value;
-        try {
-            await auth.login(email, password);
-            loadPage('admin');
-        } catch (error) {
-            e.target.querySelector('#login-error').textContent = "Email ou senha inválidos.";
+    if(e.target.id === 'service-form') {
+        const id = e.target.querySelector('#service-id').value;
+        const data = {
+            name: e.target.querySelector('#service-name').value,
+            duration: parseInt(e.target.querySelector('#service-duration').value),
+            price: parseFloat(e.target.querySelector('#service-price').value),
+        };
+        if (id) {
+            await api.updateService(id, data);
+        } else {
+            await api.addService(data);
         }
+        e.target.reset();
+        document.getElementById('service-id').value = '';
     }
-    if (e.target.id === 'add-barber-form') {
-        const name = e.target.querySelector('#barber-name').value;
-        const imageUrl = e.target.querySelector('#barber-photo').value;
-        const about = e.target.querySelector('#barber-about').value;
-        try {
-            await addBarber(name, imageUrl, about);
-            ui.modal.show("Sucesso!", "Barbeiro adicionado.");
-            e.target.reset();
-        } catch(error) { ui.modal.show("Erro", "Não foi possível adicionar o barbeiro."); }
+    if (e.target.id === 'work-schedule-form') {
+        const barberId = document.getElementById('schedule-barber-select').value;
+        if (!barberId) { alert('Selecione um barbeiro!'); return; }
+        const formData = new FormData(e.target);
+        const schedule = {};
+        const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        dayKeys.forEach(day => {
+            schedule[day] = {
+                active: formData.has(`${day}-active`),
+                start: formData.get(`${day}-start`),
+                end: formData.get(`${day}-end`),
+                breakStart: formData.get(`${day}-breakStart`),
+                breakEnd: formData.get(`${day}-breakEnd`),
+            };
+        });
+        await api.updateBarberWorkSchedule(barberId, schedule);
+        alert('Horários salvos com sucesso!');
     }
     if (e.target.id === 'booking-form') {
         const appointmentData = {
-            barberId: e.target.querySelector('#selected-barber-id').value,
-            barberName: e.target.querySelector('#selected-barber-name').value,
-            date: e.target.querySelector('#selected-date').value,
-            time: e.target.querySelector('#selected-time').value,
+            ...state.booking,
+            duration: state.booking.service.duration,
+            serviceName: state.booking.service.name,
+            price: state.booking.service.price,
+            barberId: state.booking.barber,
+            barberName: state.barbers.find(b => b.id === state.booking.barber).name,
             clientName: e.target.querySelector('#client-name').value,
             clientContact: e.target.querySelector('#client-phone').value,
         };
-        try {
-            await createAppointment(appointmentData);
-            ui.modal.show("Confirmado!", `Seu horário com ${appointmentData.barberName} às ${appointmentData.time} foi agendado.`);
-            loadPage('schedule'); // Recarrega a página de agendamento
-        } catch(error) { ui.modal.show("Erro", "Não foi possível agendar."); }
+        delete appointmentData.service;
+        await api.createAppointment(appointmentData);
+        alert('Agendamento confirmado!');
+        loadPage('home');
     }
 }
 
 async function handleDynamicChanges(e) {
-    if (e.target.matches('#barber-select, #date-select')) {
-        const barberId = document.getElementById('barber-select').value;
-        const date = document.getElementById('date-select').value;
-        if (barberId && date) {
-            document.getElementById('schedule-loader').classList.remove('hidden');
-            const appointments = await getAppointments(barberId, date);
-            const bookedSlots = appointments.map(app => app.time);
-            ui.renderTimeSlots(bookedSlots);
-            document.getElementById('schedule-loader').classList.add('hidden');
+    if (e.target.id === 'barber-select') {
+        state.booking.barber = e.target.value;
+        document.getElementById('step-3-datetime').classList.remove('hidden');
+        ui.initDatePicker('date-picker', async (dateStr) => {
+            state.booking.date = dateStr;
             document.getElementById('time-slots-container').classList.remove('hidden');
-        }
+            document.getElementById('booking-form-container').classList.add('hidden');
+            const slots = await calculateAvailableSlots();
+            ui.renderTimeSlots(slots, (time) => {
+                state.booking.time = time;
+                document.getElementById('summary-service').textContent = state.booking.service.name;
+                document.getElementById('summary-barber').textContent = state.barbers.find(b => b.id === state.booking.barber).name;
+                document.getElementById('summary-date').textContent = new Date(state.booking.date + 'T12:00:00Z').toLocaleDateString('pt-BR');
+                document.getElementById('summary-time').textContent = state.booking.time;
+                document.getElementById('booking-form-container').classList.remove('hidden');
+            });
+        });
     }
-    if (e.target.id === 'barber-schedule-date') {
-        if(state.unsubscribeAppointments) state.unsubscribeAppointments();
-        state.unsubscribeAppointments = getAppointmentsForBarber(state.currentUser.uid, e.target.value, ui.renderBarberAppointments);
-    }
-}
-
-async function handleDynamicClicks(e) {
-     if (e.target.closest('.remove-barber-btn')) {
-        const id = e.target.closest('.remove-barber-btn').dataset.id;
-        if (confirm("Tem certeza que deseja remover este barbeiro?")) {
-            try {
-                await removeBarber(id);
-                ui.modal.show("Sucesso!", "Barbeiro removido.");
-            } catch(error) { ui.modal.show("Erro", "Não foi possível remover."); }
-        }
-    }
-    if (e.target.matches('#time-slots button') && !e.target.disabled) {
-        const selected = document.querySelector('#time-slots button.bg-orange-600');
-        if(selected) selected.classList.replace('bg-orange-600','bg-zinc-700');
-        e.target.classList.replace('bg-zinc-700', 'bg-orange-600');
-
-        const barberSelect = document.getElementById('barber-select');
-        const selectedOption = barberSelect.options[barberSelect.selectedIndex];
-
-        document.getElementById('selected-barber-id').value = barberSelect.value;
-        document.getElementById('selected-barber-name').value = selectedOption.dataset.name;
-        document.getElementById('selected-date').value = document.getElementById('date-select').value;
-        document.getElementById('selected-time').value = e.target.dataset.time;
-        document.getElementById('booking-form-container').classList.remove('hidden');
+    if (e.target.id === 'schedule-barber-select') {
+        const barber = state.barbers.find(b => b.id === e.target.value);
+        ui.renderWorkScheduleForm(barber?.workSchedule);
     }
 }
 
-// --- INICIALIZAÇÃO DA APLICAÇÃO ---
+function handleDynamicClicks(e) {
+    // Lógica para delegação de eventos de clique
+}
+
+async function handleBarberSlotClick(slot) {
+    const date = document.getElementById('barber-date-picker').value;
+    if (slot.type === 'free') {
+        await api.addBlockedSlot({
+            barberId: state.currentUser.uid,
+            date: date,
+            time: slot.time
+        });
+    } else if (slot.type === 'blocked') {
+        await api.removeBlockedSlot(slot.id);
+    }
+}
+
+// --- FUNÇÕES DE INICIALIZAÇÃO E ROTEAMENTO PRINCIPAIS ---
+const appContent = document.getElementById('app-content');
+export async function loadPage(page) {
+    window.location.hash = page;
+    try {
+        const response = await fetch(`pages/${page}.html`);
+        appContent.innerHTML = await response.text();
+        await setupPage(page);
+    } catch (error) {
+        console.error("Erro ao carregar página:", error);
+    }
+}
+
 function init() {
     auth.setupAuthListener();
+
+    state.listeners.services = api.getServices(services => state.services = services);
+    state.listeners.barbers = api.getBarbers(barbers => state.barbers = barbers);
+
     setupEventListeners();
     const initialPage = window.location.hash.replace('#', '') || 'home';
     loadPage(initialPage);
-    window.addEventListener('hashchange', () => {
-        const page = window.location.hash.replace('#', '') || 'home';
-        loadPage(page);
-    });
+    window.addEventListener('hashchange', () => loadPage(window.location.hash.replace('#', '') || 'home'));
 }
-
 init();
