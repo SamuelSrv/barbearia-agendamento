@@ -103,6 +103,27 @@ async function setupPage(page) {
     cleanupListeners();
     state.booking = { service: null, barber: null, date: null, time: null };
 
+    // Adiciona listener para a página de barbeiros pública
+    if (page === 'barbers') {
+        state.listeners.barbers = api.getBarbers(barbers => {
+            // Esta função renderiza a lista pública de barbeiros
+            const barbersListContainer = document.getElementById('barbers-list');
+            if(barbersListContainer) {
+                barbersListContainer.innerHTML = '';
+                barbers.forEach(barber => {
+                    const div = document.createElement('div');
+                    div.className = 'bg-gray-800 p-6 rounded-lg text-center';
+                    div.innerHTML = `
+                        <img src="${barber.imageUrl || 'https://placehold.co/200x200/1F2937/FBBF24?text=Barbeiro'}" alt="Foto de ${barber.name}" class="w-32 h-32 rounded-full mx-auto mb-4 object-cover">
+                        <h4 class="text-xl font-bold text-amber-400">${barber.name}</h4>
+                        <p class="text-gray-400 mt-2">${barber.about}</p>
+                    `;
+                    barbersListContainer.appendChild(div);
+                });
+            }
+        });
+    }
+
     switch(page) {
         case 'schedule':
             ui.renderServicesList(state.services, (service) => {
@@ -147,6 +168,23 @@ function setupAdminTabs() {
 async function loadAdminTabData(tabId) {
     cleanupListeners();
     switch(tabId) {
+        case 'manage-barbers': // Lógica para carregar e renderizar barbeiros no admin
+            state.listeners.barbers = api.getBarbers(barbers => {
+                const container = document.getElementById('admin-barbers-list');
+                if (container) {
+                    container.innerHTML = `<h3 class="text-2xl font-bold mb-4">Barbeiros Cadastrados</h3>`;
+                    barbers.forEach(barber => {
+                        const div = document.createElement('div');
+                        div.className = 'flex justify-between items-center bg-gray-700 p-3 rounded mb-2';
+                        div.innerHTML = `
+                            <span>${barber.name}</span>
+                            <button data-id="${barber.id}" class="remove-barber-btn bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded">Remover</button>
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            });
+            break;
         case 'manage-services':
              ui.renderAdminServices(state.services,
                 (id) => {
@@ -258,28 +296,39 @@ function setupEventListeners() {
     const content = document.getElementById('app-content');
     content.addEventListener('submit', handleFormSubmissions);
     content.addEventListener('change', handleDynamicChanges);
-    // Este listener de clique agora é mais genérico para futuras adições
-    content.addEventListener('click', handleDynamicClicks);
+    content.addEventListener('click', handleDynamicClicks); // Listener para botões de remover, etc.
 }
 
 async function handleFormSubmissions(e) {
     e.preventDefault();
-
-    // ==========================================================
-    // CÓDIGO DE LOGIN RESTAURADO AQUI
-    // ==========================================================
     if (e.target.id === 'login-form') {
         const email = e.target.querySelector('#login-email').value;
         const password = e.target.querySelector('#login-password').value;
         const errorP = e.target.querySelector('#login-error');
-        errorP.textContent = ''; // Limpa erros antigos
-
+        errorP.textContent = '';
         try {
             await auth.login(email, password);
             loadPage('admin');
         } catch (error) {
             errorP.textContent = "Email ou senha inválidos.";
-            console.error("Falha no login:", error);
+        }
+    }
+    // ==========================================================
+    // CÓDIGO PARA ADICIONAR BARBEIRO RESTAURADO AQUI
+    // ==========================================================
+    if (e.target.id === 'add-barber-form') {
+        const name = e.target.querySelector('input[type="text"]').value;
+        const imageUrl = e.target.querySelector('input[type="text"]:nth-of-type(2)').value;
+        const about = e.target.querySelector('textarea').value;
+        try {
+            // No futuro, isso deveria criar um usuário no Authentication primeiro,
+            // mas por agora, vamos assumir que ele já foi criado lá.
+            await api.addBarber(name, imageUrl, about);
+            ui.modal.show("Sucesso!", "Barbeiro adicionado. Lembre-se de criar o login para ele no Firebase Authentication.");
+            e.target.reset();
+        } catch (error) {
+            ui.modal.show("Erro", "Não foi possível adicionar o barbeiro.");
+            console.error("Erro ao adicionar barbeiro:", error);
         }
     }
 
@@ -359,9 +408,24 @@ async function handleDynamicChanges(e) {
     }
 }
 
-function handleDynamicClicks(e) {
-    // Lógica para delegação de eventos de clique, como remover barbeiro, etc.
+async function handleDynamicClicks(e) {
+    // ==========================================================
+    // CÓDIGO PARA REMOVER BARBEIRO RESTAURADO AQUI
+    // ==========================================================
+    if (e.target.classList.contains('remove-barber-btn')) {
+        const barberId = e.target.dataset.id;
+        if (confirm('Tem certeza que deseja remover este barbeiro? A ação não pode ser desfeita.')) {
+            try {
+                await api.removeBarber(barberId);
+                ui.modal.show("Sucesso", "Barbeiro removido.");
+            } catch (error) {
+                ui.modal.show("Erro", "Não foi possível remover o barbeiro.");
+                console.error("Erro ao remover barbeiro:", error);
+            }
+        }
+    }
 }
+
 
 async function handleBarberSlotClick(slot) {
     const date = document.getElementById('barber-date-picker').value;
