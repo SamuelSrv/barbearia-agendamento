@@ -1,20 +1,7 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+// A inicialização do Firebase foi removida daqui, pois agora é centralizada
 import { getBarbers, addBarber, removeBarber, getAppointments, createAppointment, getAppointmentsForBarber } from './api.js';
 import * as ui from './ui.js';
 import * as auth from './auth.js';
-
-// --- CONFIGURAÇÃO FIREBASE ---
-// Cole sua configuração do Firebase aqui
-const firebaseConfig = {
-  apiKey: "AIzaSyAM5aEJRxxzuDUSfpuXL7sjYd_p0o5qet8",
-  authDomain: "projetobarbearia01.firebaseapp.com",
-  projectId: "projetobarbearia01",
-  storageBucket: "projetobarbearia01.firebasestorage.app",
-  messagingSenderId: "629044069637",
-  appId: "1:629044069637:web:4b6de7ee41ad79c310636c",
-  measurementId: "G-PRHMJEMWXE"
-};
-initializeApp(firebaseConfig);
 
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
 export const state = {
@@ -173,9 +160,9 @@ async function handleDynamicClicks(e) {
         }
     }
     if (e.target.matches('#time-slots button') && !e.target.disabled) {
-        const selected = document.querySelector('#time-slots button.bg-green-500');
-        if(selected) selected.classList.replace('bg-green-500','bg-amber-400');
-        e.target.classList.replace('bg-amber-400', 'bg-green-500');
+        const selected = document.querySelector('#time-slots button.bg-orange-600');
+        if(selected) selected.classList.replace('bg-orange-600','bg-zinc-700');
+        e.target.classList.replace('bg-zinc-700', 'bg-orange-600');
 
         const barberSelect = document.getElementById('barber-select');
         const selectedOption = barberSelect.options[barberSelect.selectedIndex];

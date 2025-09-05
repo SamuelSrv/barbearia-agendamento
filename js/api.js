@@ -1,9 +1,9 @@
-import { 
-    getFirestore, collection, getDocs, addDoc, doc, getDoc, 
-    query, where, deleteDoc, onSnapshot 
+// Importa a instância 'db' já inicializada do nosso arquivo central
+import { db } from './firebase.js';
+import {
+    collection, getDocs, addDoc, doc, getDoc,
+    query, where, deleteDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-const db = getFirestore();
 
 // --- BARBERS API ---
 export function getBarbers(callback) {

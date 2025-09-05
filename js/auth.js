@@ -1,11 +1,11 @@
-import { 
-    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut 
+// Importa a instância 'auth' já inicializada
+import { auth } from './firebase.js';
+import {
+    signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getUserRole } from './api.js';
 import { updateNav } from './ui.js';
 import { loadPage, state } from './main.js';
-
-const auth = getAuth();
 
 export function setupAuthListener() {
     onAuthStateChanged(auth, async (user) => {
@@ -15,7 +15,7 @@ export function setupAuthListener() {
         } else {
             state.currentUser = null;
             if (window.location.hash === '#admin') {
-                loadPage('home'); // Redirect if logged out from admin page
+                loadPage('home'); // Redireciona se estiver deslogado da página de admin
             }
         }
         updateNav(state.currentUser);
