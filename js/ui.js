@@ -80,6 +80,34 @@ export function renderTimeSlots(slots, onSelect) {
     });
 }
 
+// ==========================================================
+// CORREÇÃO APLICADA AQUI: Adicionada a palavra "export"
+// ==========================================================
+export function updateNav(user) {
+    const loggedOutLinks = document.querySelectorAll('#login-nav-link, #login-nav-link-mobile');
+    const loggedInLinks = document.querySelectorAll('#admin-nav-link, #logout-nav-link, #admin-nav-link-mobile, #logout-nav-link-mobile');
+
+    if (user) {
+        loggedOutLinks.forEach(link => link.classList.add('hidden'));
+        loggedInLinks.forEach(link => link.classList.remove('hidden'));
+    } else {
+        loggedOutLinks.forEach(link => link.classList.remove('hidden'));
+        loggedInLinks.forEach(link => link.classList.add('hidden'));
+    }
+}
+
+export const modal = {
+    show(title, message) {
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-message').textContent = message;
+        document.getElementById('modal').classList.remove('hidden');
+    },
+    hide() {
+        document.getElementById('modal').classList.add('hidden');
+    }
+};
+
+
 // --- RENDERIZAÇÃO DO PAINEL DE ADMIN E BARBEIRO ---
 export function renderAdminTabs(role) {
     const tabsContainer = document.getElementById('admin-tabs');
@@ -201,7 +229,6 @@ export function renderBarberDaySchedule(slots, onSlotClick) {
         container.appendChild(div);
     });
 }
-
 
 // --- GRÁFICOS DO DASHBOARD ---
 function destroyChart(chartId) {
