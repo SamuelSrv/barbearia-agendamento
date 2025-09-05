@@ -188,9 +188,13 @@ async function loadAdminTabData(tabId) {
             });
             break;
         case 'manage-services':
-             // O listener principal já está cuidando da atualização do state.services.
-             // Aqui apenas renderizamos a lista com os dados atuais.
-             renderAdminServicesUI();
+             // ==========================================================
+             // CORREÇÃO APLICADA AQUI: O listener agora é ativado QUANDO a aba é aberta.
+             // ==========================================================
+             state.listeners.services = api.getServices(services => {
+                state.services = services; // Atualiza o estado global
+                renderAdminServicesUI(); // Redesenha a UI com os dados mais recentes
+             });
             break;
         case 'manage-schedules':
             ui.populateBarberSelect(state.barbers, 'schedule-barber-select');
@@ -204,10 +208,9 @@ async function loadAdminTabData(tabId) {
     }
 }
 
-// Função auxiliar para renderizar a UI de serviços no painel
 function renderAdminServicesUI() {
     ui.renderAdminServices(state.services,
-        (id) => { // Lógica de Edição
+        (id) => {
             const service = state.services.find(s => s.id === id);
             if (service) {
                 document.getElementById('service-id').value = service.id;
@@ -216,12 +219,11 @@ function renderAdminServicesUI() {
                 document.getElementById('service-price').value = service.price;
             }
         },
-        async (id) => { // Lógica de Remoção
+        async (id) => {
             if(confirm('Tem certeza? Isso removerá o serviço permanentemente.')) await api.removeService(id);
         }
     );
 }
-
 
 async function loadBarberDaySchedule(date) {
     const barberId = state.currentUser.uid;
@@ -475,20 +477,10 @@ export async function loadPage(page) {
 function init() {
     auth.setupAuthListener();
 
-    // ==========================================================
-    // CORREÇÃO APLICADA AQUI: O listener agora também redesenha a UI
-    // ==========================================================
-    state.listeners.services = api.getServices(services => {
-        state.services = services;
-        // Se o usuário estiver na aba de gerenciar serviços, atualiza a lista em tempo real
-        if (document.getElementById('manage-services-content')?.style.display === 'block') {
-            renderAdminServicesUI();
-        }
-    });
-
-    state.listeners.barbers = api.getBarbers(barbers => {
-        state.barbers = barbers;
-    });
+    // Estes listeners agora apenas populam o estado global na primeira carga.
+    // A atualização da UI para seções específicas é tratada dentro de `loadAdminTabData`.
+    api.getServices(services => state.services = services);
+    api.getBarbers(barbers => state.barbers = barbers);
 
     setupEventListeners();
     const initialPage = window.location.hash.replace('#', '') || 'home';
